@@ -3,11 +3,11 @@
 ![image](https://user-images.githubusercontent.com/83499348/236677801-e0004c22-8e2e-4b5e-9e2e-91869457c5ae.png)
 
 ## Secure & Efficient solution for Open Source Software Licenses.
-SofToken is a blockchain-based application that allows users to Mint a NFT for their software. Other users have a option to subscribe to the minted NFT and use it to build their own software. Different types of restrictions can be applied to the usage of a software before it is minted.
+SofToken is a blockchain-based application that allows users to Mint a NFT for their software. Other users have a option to subscribe to the minted NFT and use it to build their own software. Different types of restrictions can be applied to the usage of a software before it is minted.  
 
+[Demo Video](https://youtu.be/FiZogh0bRPg)
 
-
-
+[dAppAthon Submission](https://devpost.com/software/softoken)
 
 ## ⚒️ Working of SofToken
 
@@ -82,7 +82,7 @@ Mantle Testnet Explorer Link: [Link](https://explorer.testnet.mantle.xyz/address
 
 ## 👩‍💻 Team members
 
-- **Sarvagnya Putohit**
+- **Sarvagnya Purohit**
 - **Harsh Nag**
 - **Ananya Bangera**
 - **Chaitya Vora**
