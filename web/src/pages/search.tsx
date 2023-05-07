@@ -30,7 +30,8 @@ import DependencySelect from '@/components/ui/dependency-select';
 import { polybase } from '@/data/utils/polybase';
 import { listenerCount } from 'process';
 const gridCompactViewAtom = atom(false);
-// import rout
+
+import { useRouter } from 'next/router.js';
 
 export function DrawerFilters() {
   const { closeDrawer } = useDrawer();
@@ -314,7 +315,7 @@ const SearchPage: NextPageWithLayout<
   const [listOfNFTs, setlistOfNFTs] = useState([]);
   const { address, disconnectWallet, balance } = useContext(WalletContext);
   const NFTcollection = polybase.collection('NFT');
-
+  const router = useRouter();
   const web3Modal =
     typeof window !== 'undefined' && new Web3Modal({ cacheProvider: true });
 
@@ -359,7 +360,7 @@ const SearchPage: NextPageWithLayout<
     listOfNFT.data.forEach(function (item, index) {
       console.log(item.data, index);
       finalList.push({
-        id: index, //needs to be updated
+        id: item.data.id,  //needs to be updated
         name: item.data.name,
         desc: item.data.description,
         price: item.data.base_price + ' ETH',
@@ -384,16 +385,18 @@ const SearchPage: NextPageWithLayout<
         item.data.clause_type === status
       ) {
         finalList.push({
-          id: index, //needs to be updated
+          id: item.data.id, //needs to be updated
           name: item.data.name,
           desc: item.data.description,
           price: item.data.base_price + ' ETH',
           author: item.data.minter.id,
           clause: item.data.clause_type,
         });
+        console.log(item.data.id)
       }
     });
     setlistOfNFTs(finalList);
+    // console.log(listOfNFTs)
   };
 
   useEffect(() => {
@@ -422,7 +425,7 @@ const SearchPage: NextPageWithLayout<
         <div className="2xl:ltr:pl-10 2xl:rtl:pr-10 4xl:ltr:pl-12 4xl:rtl:pr-12">
           <div className="relative z-10 mb-6 flex items-center justify-between">
             <span className="text-xs font-medium text-gray-900 dark:text-white sm:text-sm">
-              5,686,066 items
+              {listOfNFTs.length} items
             </span>
 
             <div className="flex gap-6 2xl:gap-8">

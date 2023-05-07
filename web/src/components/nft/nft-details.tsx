@@ -15,36 +15,207 @@ import { nftData } from '@/data/static/single-nft';
 import NftDropDown from './nft-dropdown';
 import Avatar from '@/components/ui/avatar';
 import { WalletContext } from '@/lib/hooks/use-connect';
-import { Contract, ethers } from 'ethers';
+import { BigNumber, Contract, ethers } from 'ethers';
 import * as PushAPI from '@pushprotocol/restapi';
 import Web3Modal from 'web3modal';
 import { useRouter } from 'next/router';
-import { useContext } from 'react';
+import { useCallback, useContext, useEffect, useState } from 'react';
 import { CONTRACT_ADDRESS, ABI } from '@/constants';
+import { useContractWrite, useContractRead } from '@thirdweb-dev/react';
+import { ThirdwebSDK } from '@thirdweb-dev/sdk';
+import { parseInt } from 'lodash';
+import Slider from 'rc-slider';
 
 interface NftFooterProps {
   className?: string;
   price?: number;
+  name_of_nft: string;
+  minter: object;
+  tok_id: string;
 }
 
-function NftFooter({ className = 'md:hidden', price }: NftFooterProps) {
+function NftFooter({
+  className = 'md:hidden',
+  price,
+  name_of_nft,
+  minter,
+  tok_id
+}: NftFooterProps) {
   const { openModal } = useModal();
   const router = useRouter();
   const { address, disconnectWallet, balance } = useContext(WalletContext);
   const web3Modal =
     typeof window !== 'undefined' && new Web3Modal({ cacheProvider: true });
+  
+  const query = router.query;
+
+  const [tokenId, setTokenId] = useState(0);
+  const [contract, setContract] = useState(null);
+  const [rate, setRate] = useState(0);
+  const [tokenId0, setTokenId0] = useState(0);
+  const [rate0, setRate0] = useState(0);
+  const [curr_price, setcurr_price] = useState(price)
+  const { mutateAsync: vote, isLoading1 } = useContractWrite(contract, 'vote');
+  const { mutateAsync: getRate, isLoading2 } = useContractWrite(
+    contract,
+    'getRate'
+  );
+  const [walletConnected, setWalletConnected] = useState(false);
+  var rate_NFT = 0
+  const call = async () => {
+    try {
+      const data = await vote([tok_id, rate_NFT]);
+      console.info('contract call successs', data);
+    } catch (err) {
+      console.error('contract call failure', err);
+    }
+  };
+  const getRateFunction = async () => {
+    console.log('Started');
+    console.log(tok_id);
+    try {
+      const data = await getRate([tok_id]);
+      console.log(data.toString());
+      setRate0(parseInt(data['_hex'], 16));
+      console.info('contract call successs', parseInt(data['_hex'], 16));
+      setcurr_price(parseFloat(price) * (1 + (parseFloat(data.toString()) / 1000)))
+      console.log(curr_price)
+    } catch (err) {
+      console.error('contract call failure', err);
+    }
+  };
+  function PriceRange() {
+    let [range, setRange] = useState({ min: 1, max: 10 });
+    function handleRangeChange(value: any) {
+      setRange({
+        min: value[0],
+        max: value[1],
+      });
+      rate_NFT = value[0]
+      console.log(`rate is:${rate_NFT}`)
+    }
+  
+    function handleMinChange(min: number) {
+      setRange({
+        ...range,
+        min: min || 0,
+      });
+    }
+
+    return (
+      <div className="p-5">
+        <div className="mb-4 grid grid-cols-2 gap-2">
+          <input
+            className="h-9 rounded-lg border-gray-200 text-sm text-gray-900 outline-none focus:border-gray-900 focus:outline-none focus:ring-0 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:focus:border-gray-500"
+            type="number"
+            value={range.min}
+            step={0.01}
+            onChange={(e) => handleMinChange(parseInt(e.target.value))}
+            min="0"
+            max={range.max}
+          />
+          {/* <input
+            className="h-9 rounded-lg border-gray-200 text-sm text-gray-900 outline-none focus:border-gray-900 focus:outline-none focus:ring-0 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:focus:border-gray-500"
+            type="number"
+            value={range.max}
+            step={0.01}
+            onChange={(e) => handleMaxChange(parseInt(e.target.value))}
+            // onBlur={setprice_range(range)}
+            min={range.min}
+          /> */}
+        </div>
+        <Slider
+          range
+          min={1}
+          max={10}
+          value={[range.min, 10]}
+          allowCross={false}
+          step={1}
+          onChange={(value) => handleRangeChange(value)}
+          // onBlur={setprice_range(range)}
+        />
+      </div>
+    );
+  }
+  const initialLoad = async () => {
+    const connection = web3Modal && (await web3Modal.connect());
+    const provider = new ethers.providers.Web3Provider(connection);
+    const signer = provider.getSigner();
+
+    const sdk = ThirdwebSDK.fromSigner(signer);
+
+    const contract = await sdk.getContract(
+      '0x9d7B3B7F55743bBA41cc4Cc21d7D1660e43411e1'
+    );
+    console.log(contract);
+    setContract(contract);
+    setWalletConnected(true);
+    var num = parseInt(query);
+    setTokenId(num);
+    getRateFunction(num);
+    
+  };
   const subscribeNFT = async () => {
     const connection = web3Modal && (await web3Modal.connect());
     const provider = new ethers.providers.Web3Provider(connection);
     const signer = provider.getSigner();
     const tokensContract = new Contract(CONTRACT_ADDRESS, ABI, signer);
     //fetch token id  and curr cost of nft from polybase
-    const token_id = 1;
-    const cost_of_nft = 10;
+    const token_id = parseInt(tok_id);
+    const cost_of_nft = (parseFloat(curr_price) * 10 ** 18).toString();
+    //1 ether = 10^18 =>cost of nft
+    let ethersToWei = ethers.utils.parseUnits(parseFloat(curr_price).toString(), 'ether');
+    console.log(ethersToWei);
+    console.log(ethersToWei.toString());
+    console.log(ethersToWei.toHexString(16));
+    ethereum
+      .request({
+        method: 'eth_sendTransaction',
+        params: [
+          {
+            from: address,
+            to: CONTRACT_ADDRESS,
+            value: ethersToWei.toHexString(16),
+          },
+        ],
+      })
+      .then((txHash) => console.log(txHash))
+      .catch((error) => console.error(error));
     const res = await tokensContract.subscribe(token_id, cost_of_nft);
     console.log(res);
-    router.push({ pathname: '/profile' });
+    //Request to admin
+
+    const user = await PushAPI.user.get({
+      account: `eip155:${address}`,
+    });
+    console.log(user);
+    console.log(user.encryptedPrivateKey);
+    const pgpDecryptedPvtKey = await PushAPI.chat.decryptPGPKey({
+      encryptedPGPPrivateKey: user.encryptedPrivateKey,
+      signer: signer,
+    });
+    // console.log(curr_msg);
+    
+    // actual api
+    var admin_addr = '0x4A9CF09B996F0Ddf5498201f1D6cb8f6C88e3e0e'; // minter address fetched from polybase
+    const response = await PushAPI.chat.send({
+      messageContent: `Kindly add me to your group: ${name_of_nft}`,
+      messageType: 'Text', // can be "Text" | "Image" | "File" | "GIF"
+      receiverAddress: `${admin_addr}`,
+      signer: signer,
+      pgpPrivateKey: pgpDecryptedPvtKey,
+    });
+    console.log(response);
+    
+
+    // router.push({ pathname: '/profile' });
   };
+
+  useEffect(() => {
+    initialLoad();
+    
+  }, [query,curr_price]);
+
   return (
     <div
       className={cn(
@@ -52,6 +223,11 @@ function NftFooter({ className = 'md:hidden', price }: NftFooterProps) {
         className
       )}
     >
+      <Button onClick={getRateFunction}>Testing</Button>
+      <Button onClick={async()=>{
+        await call()
+      }}>Rate</Button>
+      <PriceRange/>
       <div className="-mx-4 border-t-2 border-gray-900 px-4 pt-4 pb-5 dark:border-gray-700 sm:-mx-6 sm:px-6 md:mx-2 md:px-0 md:pt-5 lg:pt-6 lg:pb-7">
         <div className="flex gap-4 pb-3.5 md:pb-4 xl:gap-5">
           <div className="block w-1/2 shrink-0 md:w-2/5">
@@ -59,14 +235,14 @@ function NftFooter({ className = 'md:hidden', price }: NftFooterProps) {
               Current Price
             </h3>
             <div className="text-lg font-medium -tracking-wider md:text-xl xl:text-2xl">
-              {price} ETH
+              {curr_price} ETH
             </div>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <Button shape="rounded" onClick={subscribeNFT}>
-            {`BUY FOR ${price} ETH`}
+            {`BUY FOR ${curr_price} ETH`}
           </Button>
           <Button
             shape="rounded"
@@ -91,6 +267,7 @@ type NftDetailsProps = {
   minted_slug: string;
   base_price: number;
   minter: object;
+  tok_id: string;
 };
 
 export default function NftDetails({ product }: { product: NftDetailsProps }) {
@@ -99,9 +276,10 @@ export default function NftDetails({ product }: { product: NftDetailsProps }) {
     name,
     description,
     timestamp,
-    minted_slug,
+    clause_type,
     base_price,
     minter,
+    tok_id
   } = product;
   return (
     <div className="flex flex-grow">
@@ -127,41 +305,45 @@ export default function NftDetails({ product }: { product: NftDetailsProps }) {
                 <h2 className="text-xl font-medium leading-[1.45em] -tracking-wider text-gray-900 dark:text-white md:text-2xl xl:text-3xl">
                   {name}
                 </h2>
-                <div className="mt-1.5 shrink-0 ltr:ml-3 rtl:mr-3 xl:mt-2">
-                  <NftDropDown />
-                </div>
               </div>
-              {/* <AnchorLink
-                href={minted_slug}
-                className="mt-1.5 inline-flex items-center text-sm -tracking-wider text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white xl:mt-2.5"
-              >
-                Minted on {timestamp}
-                <ArrowLinkIcon className="h-3 w-3 ltr:ml-2 rtl:mr-2" />
-              </AnchorLink> */}
+              <div className="mt-1.5 inline-flex items-center text-sm -tracking-wider text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white xl:mt-2.5">
+                Minted on{' '}
+                {`${new Date(parseInt(timestamp)).toLocaleDateString()}`}
+              </div>
               <div className="mt-4 flex flex-wrap gap-6 pt-0.5 lg:-mx-6 lg:mt-6 lg:gap-0">
                 <div className="shrink-0 border-dashed border-gray-200 dark:border-gray-700 lg:px-6 lg:ltr:border-r lg:rtl:border-l">
                   <h3 className="text-heading-style mb-2 uppercase text-gray-900 dark:text-white">
                     Created By
                   </h3>
-                  {/* {minter && (
-                    <AnchorLink href={minter.username} className="inline-flex">
+                  {minter && (
+                    <AnchorLink
+                      href={`/profile/${minter.username}`}
+                      className="inline-flex"
+                    >
                       <ListCard
-                        item={minter.username}
+                        item={minter}
                         className="rounded-full p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
                       />
                     </AnchorLink>
-                  )} */}
+                  )}
                 </div>
                 <div className="shrink-0 lg:px-6">
                   <h3 className="text-heading-style mb-2.5 uppercase text-gray-900 dark:text-white">
                     License
                   </h3>
-                  {/* <AnchorLink href="#" className="inline-flex">
+                  <AnchorLink href="#" className="inline-flex">
                     <ListCard
-                      item={collection}
+                      item={{
+                        name:
+                          clause_type === 'prop'
+                            ? 'Properiatary'
+                            : clause_type === 'royalty'
+                            ? 'Reusable code with Royalty'
+                            : 'Reusable code without Royalty',
+                      }}
                       className="rounded-full p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
                     />
-                  </AnchorLink> */}
+                  </AnchorLink>
                 </div>
               </div>
             </div>
@@ -171,10 +353,6 @@ export default function NftDetails({ product }: { product: NftDetailsProps }) {
                   {
                     title: 'Details',
                     path: 'details',
-                  },
-                  {
-                    title: 'Purchases',
-                    path: 'purchases',
                   },
                   {
                     title: 'Dependencies',
@@ -205,23 +383,18 @@ export default function NftDetails({ product }: { product: NftDetailsProps }) {
                     ))}
                   </div>
                 </TabPanel>
-                <TabPanel className="focus:outline-none">
-                  <div className="flex flex-col-reverse">
-                    {nftData?.history?.map((item) => (
-                      <FeaturedCard
-                        item={item}
-                        key={item?.id}
-                        className="mb-3 first:mb-0"
-                      />
-                    ))}
-                  </div>
-                </TabPanel>
               </ParamTab>
             </div>
           </div>
-          <NftFooter className="hidden md:block" price={base_price} />
+          <NftFooter
+            className="hidden md:block"
+            price={base_price}
+            name_of_nft={name}
+            minter={minter}
+            tok_id={tok_id}
+          />
         </div>
-        <NftFooter price={base_price} />
+        <NftFooter price={base_price} tok_id={tok_id} name_of_nft={name} minter={minter} />
       </div>
     </div>
   );
