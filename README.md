@@ -1,4 +1,7 @@
 # 🗄️ SofToken
+
+![image](https://user-images.githubusercontent.com/83499348/236677801-e0004c22-8e2e-4b5e-9e2e-91869457c5ae.png)
+
 ## Secure & Efficient solution for Open Source Software Licenses.
 SofToken is a blockchain-based application that allows users to Mint a NFT for their software. Other users have a option to subscribe to the minted NFT and use it to build their own software. Different types of restrictions can be applied to the usage of a software before it is minted.
 
