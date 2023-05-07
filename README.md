@@ -55,13 +55,13 @@ SofToken is a blockchain-based application that allows users to Mint a NFT for t
 ## ⚙️ Tech Stack
 - NextJS - Frontend
 - Solidity - Smart Contract
-- Scroll - Deployment of Contract.
+- Mantle - Deployment of Contract.
 - Polybase - Storing User and NFT details.
 - Push Protocol 
     - Push Chat for 1-1 and Group Chat
     - Push Notifications
 - Chainlink - Implementing Aggregator function off the chain
-- IPFS - Storing ZIP files of software, User Profile, Cover Images.
+- IPFS Filecoin - Storing ZIP files of software, User Profile, Cover Images.
 
 ## 🔍 Future Scope
 - Implement TheGraph for fetching the live rates of the NFT's.
@@ -69,6 +69,13 @@ SofToken is a blockchain-based application that allows users to Mint a NFT for t
 - Categorizing NFT softwares into different domains.
 - Integrate Push Notifs with TheGraph subgraph
 
+## 🗒️Smart Contract Deployment
+
+Deployment Network - Mantle Testnet
+
+Contract Address: 0x744b61418D77d4C4AA953cD36403D353F7Cd947e
+
+Mantle Testnet Explorer Link: [Link](https://explorer.testnet.mantle.xyz/address/0x744b61418D77d4C4AA953cD36403D353F7Cd947e)
 
 ## 👩‍💻 Team members
 
