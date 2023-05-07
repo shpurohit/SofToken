@@ -20,11 +20,12 @@ import * as PushAPI from '@pushprotocol/restapi';
 import Web3Modal from 'web3modal';
 import { useRouter } from 'next/router';
 import { useCallback, useContext, useEffect, useState } from 'react';
-import { CONTRACT_ADDRESS, ABI } from '@/constants';
+import { CONTRACT_ADDRESS, ABI, DIFF_ABI } from '@/constants';
 import { useContractWrite, useContractRead } from '@thirdweb-dev/react';
 import { ThirdwebSDK } from '@thirdweb-dev/sdk';
 import { parseInt } from 'lodash';
 import Slider from 'rc-slider';
+import { Web3Storage } from 'web3.storage';
 
 interface NftFooterProps {
   className?: string;
@@ -39,14 +40,18 @@ function NftFooter({
   price,
   name_of_nft,
   minter,
-  tok_id
+  tok_id,
 }: NftFooterProps) {
   const { openModal } = useModal();
   const router = useRouter();
   const { address, disconnectWallet, balance } = useContext(WalletContext);
   const web3Modal =
     typeof window !== 'undefined' && new Web3Modal({ cacheProvider: true });
-  
+<<<<<<< HEAD
+  const [isDone, setisDone] = useState(false);
+=======
+
+>>>>>>> 4181b0d74d187918c14a1a006daeb2b0a5d876a7
   const query = router.query;
 
   const [tokenId, setTokenId] = useState(0);
@@ -54,14 +59,14 @@ function NftFooter({
   const [rate, setRate] = useState(0);
   const [tokenId0, setTokenId0] = useState(0);
   const [rate0, setRate0] = useState(0);
-  const [curr_price, setcurr_price] = useState(price)
+  const [curr_price, setcurr_price] = useState(price);
   const { mutateAsync: vote, isLoading1 } = useContractWrite(contract, 'vote');
   const { mutateAsync: getRate, isLoading2 } = useContractWrite(
     contract,
     'getRate'
   );
   const [walletConnected, setWalletConnected] = useState(false);
-  var rate_NFT = 0
+  var rate_NFT = 0;
   const call = async () => {
     try {
       const data = await vote([tok_id, rate_NFT]);
@@ -78,8 +83,10 @@ function NftFooter({
       console.log(data.toString());
       setRate0(parseInt(data['_hex'], 16));
       console.info('contract call successs', parseInt(data['_hex'], 16));
-      setcurr_price(parseFloat(price) * (1 + (parseFloat(data.toString()) / 1000)))
-      console.log(curr_price)
+      setcurr_price(
+        parseFloat(price) * (1 + parseFloat(data.toString()) / 1000)
+      );
+      console.log(curr_price);
     } catch (err) {
       console.error('contract call failure', err);
     }
@@ -91,10 +98,10 @@ function NftFooter({
         min: value[0],
         max: value[1],
       });
-      rate_NFT = value[0]
-      console.log(`rate is:${rate_NFT}`)
+      rate_NFT = value[0];
+      console.log(`rate is:${rate_NFT}`);
     }
-  
+
     function handleMinChange(min: number) {
       setRange({
         ...range,
@@ -144,8 +151,9 @@ function NftFooter({
 
     const sdk = ThirdwebSDK.fromSigner(signer);
 
-    const contract = await sdk.getContract(
-      '0x9d7B3B7F55743bBA41cc4Cc21d7D1660e43411e1'
+    const contract = await sdk.getContractFromAbi(
+      '0x9d7B3B7F55743bBA41cc4Cc21d7D1660e43411e1',
+      DIFF_ABI
     );
     console.log(contract);
     setContract(contract);
@@ -153,8 +161,10 @@ function NftFooter({
     var num = parseInt(query);
     setTokenId(num);
     getRateFunction(num);
-    
   };
+  function makeStorageClient() {
+    return new Web3Storage({ token: process.env.NEXT_PUBLIC_FILECOIN_API_KEY });
+  }
   const subscribeNFT = async () => {
     const connection = web3Modal && (await web3Modal.connect());
     const provider = new ethers.providers.Web3Provider(connection);
@@ -164,7 +174,10 @@ function NftFooter({
     const token_id = parseInt(tok_id);
     const cost_of_nft = (parseFloat(curr_price) * 10 ** 18).toString();
     //1 ether = 10^18 =>cost of nft
-    let ethersToWei = ethers.utils.parseUnits(parseFloat(curr_price).toString(), 'ether');
+    let ethersToWei = ethers.utils.parseUnits(
+      parseFloat(curr_price).toString(),
+      'ether'
+    );
     console.log(ethersToWei);
     console.log(ethersToWei.toString());
     console.log(ethersToWei.toHexString(16));
@@ -195,7 +208,7 @@ function NftFooter({
       signer: signer,
     });
     // console.log(curr_msg);
-    
+
     // actual api
     var admin_addr = '0x4A9CF09B996F0Ddf5498201f1D6cb8f6C88e3e0e'; // minter address fetched from polybase
     const response = await PushAPI.chat.send({
@@ -206,15 +219,79 @@ function NftFooter({
       pgpPrivateKey: pgpDecryptedPvtKey,
     });
     console.log(response);
-    
+
+    const cidReq = await tokensContract.getCID(tok_id);
+    console.log(cidReq);
+    setisDone(true);
+
+    // router.push({ pathname: '/profile' });
+  };
+  const downloadNft = async () => {
+    const connection = web3Modal && (await web3Modal.connect());
+    const provider = new ethers.providers.Web3Provider(connection);
+    const signer = provider.getSigner();
+    const tokensContract = new Contract(CONTRACT_ADDRESS, ABI, signer);
+    //fetch token id  and curr cost of nft from polybase
+    const token_id = parseInt(tok_id);
+
+    //Request to admin
+
+    const cidReq = await tokensContract.getCID(2);
+    console.log(cidReq);
+    const client = makeStorageClient();
+    const res = await client.get(cidReq);
+    const files = await res?.files();
+    console.log(files);
+    var a = document.createElement('a');
+    a.href = window.URL.createObjectURL(files[0]);
+    a.download = files[0].name;
+    a.click();
+    // var element = document.createElement('a');
+    // element.setAttribute(
+    //   'href',
+    //   'data:text/plain;charset=utf-8,' + encodeURIComponent(text)
+    // );
+    // element.setAttribute('download', files[0].name);
+    // document.body.appendChild(element);
+    // element.click();
+    // document.body.removeChild(element);
+
+    //   fetch(`https://${cidReq}.ipfs.w3s.link/`, {
+    //   method: 'GET',
+    //   headers: {
+    //     'Content-Type': 'application/pdf',
+
+    //   },
+    // })
+    // .then((response) => response.blob())
+    // .then((blob) => {
+    //   // Create blob link to download
+    //   const url = window.URL.createObjectURL(
+    //     new Blob([blob]),
+    //   );
+    //   const link = document.createElement('a');
+    //   link.href = url;
+    //   link.setAttribute(
+    //     'download',
+    //     `FileName.pdf`,
+    //   );
+
+    //   // Append to html link element page
+    //   document.body.appendChild(link);
+
+    //   // Start download
+    //   link.click();
+
+    //   // Clean up and remove the link
+    //   link.parentNode.removeChild(link);
+    // });
 
     // router.push({ pathname: '/profile' });
   };
 
   useEffect(() => {
     initialLoad();
-    
-  }, [query,curr_price]);
+  }, [query, curr_price]);
 
   return (
     <div
@@ -223,11 +300,16 @@ function NftFooter({
         className
       )}
     >
-      <Button onClick={getRateFunction}>Testing</Button>
-      <Button onClick={async()=>{
-        await call()
-      }}>Rate</Button>
-      <PriceRange/>
+      {/* <Button onClick={getRateFunction}>Testing</Button>
+      <Button onClick={downloadNft}>Dwnld</Button> */}
+      <Button
+        onClick={async () => {
+          await call();
+        }}
+      >
+        Rate
+      </Button>
+      <PriceRange />
       <div className="-mx-4 border-t-2 border-gray-900 px-4 pt-4 pb-5 dark:border-gray-700 sm:-mx-6 sm:px-6 md:mx-2 md:px-0 md:pt-5 lg:pt-6 lg:pb-7">
         <div className="flex gap-4 pb-3.5 md:pb-4 xl:gap-5">
           <div className="block w-1/2 shrink-0 md:w-2/5">
@@ -241,9 +323,15 @@ function NftFooter({
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <Button shape="rounded" onClick={subscribeNFT}>
-            {`BUY FOR ${curr_price} ETH`}
-          </Button>
+          {!isDone ? (
+            <Button shape="rounded" onClick={subscribeNFT}>
+              {`BUY FOR ${curr_price} ETH`}
+            </Button>
+          ) : (
+            <Button shape="rounded" onClick={downloadNft}>
+              {`Download Source Code`}
+            </Button>
+          )}
           <Button
             shape="rounded"
             variant="solid"
@@ -279,7 +367,7 @@ export default function NftDetails({ product }: { product: NftDetailsProps }) {
     clause_type,
     base_price,
     minter,
-    tok_id
+    tok_id,
   } = product;
   return (
     <div className="flex flex-grow">
@@ -394,7 +482,12 @@ export default function NftDetails({ product }: { product: NftDetailsProps }) {
             tok_id={tok_id}
           />
         </div>
-        <NftFooter price={base_price} tok_id={tok_id} name_of_nft={name} minter={minter} />
+        <NftFooter
+          price={base_price}
+          tok_id={tok_id}
+          name_of_nft={name}
+          minter={minter}
+        />
       </div>
     </div>
   );
